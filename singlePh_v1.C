@@ -18,7 +18,6 @@ struct outValues{
 outValues CalculateFraction(TH1* histo, Double_t threshold, Bool_t print = kTRUE)
 {
   // Calculate occupancy using the scaled histograms
-
   outValues result;
 
   Int_t TrsBin = histo ->  FindBin(threshold);
