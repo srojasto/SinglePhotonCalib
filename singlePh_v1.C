@@ -150,18 +150,31 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
   // Calculation of ocupancy
   // nf = number of events falling below the charge threshold cut in blank data
 
+  // Plots to checck the occupancy and fraction behavior at different thresholds
+  TGraph *grOccupancy = new TGraph();
+  TGraph *grFraction = new TGraph();
 
   // Calculate occupancy using the scaled histograms
   cout << "after scaling" << endl;
-  for (Double_t i = -290; i < -100; i += 1){
+  Int_t Index = 0;
+  for (Double_t i = -290; i < -100; i += 1, Index++){
+
     outValues afblankResult = CalculateFraction(h1Ped, i, kFALSE);
     outValues afsignalResult = CalculateFraction(h1, i, kFALSE);
 
     Double_t occupancy = -TMath::Log(afsignalResult.belowTrs/(afblankResult.fraction*afsignalResult.totalN));
 
-    cout << "thrs = " << i << "\toccupancy = " << occupancy;
-    cout << "\tf = " << afblankResult.fraction << endl;
+    grOccupancy -> SetPoint(Index, i, occupancy);
+    grFraction-> SetPoint(Index, i, afblankResult.fraction);
+
+    // cout << Index;
+    // cout << ") thrs = " << i << "\toccupancy = " << occupancy;
+    // cout << "\tf = " << afblankResult.fraction << endl;
   }
+
+  
+
+
 	//TE->StartViewer();
 
 }
