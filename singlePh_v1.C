@@ -152,7 +152,13 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
 
   // Plots to checck the occupancy and fraction behavior at different thresholds
   TGraph *grOccupancy = new TGraph();
+  grOccupancy -> SetTitle("Ocupancy plot;Threshold (mV);Ocupancy");
+
   TGraph *grFraction = new TGraph();
+  grFraction -> SetTitle("Fraction plot;Threshold (mV);Fraction");
+
+  TGraph2D *dt = new TGraph2D();
+
 
   // Calculate occupancy using the scaled histograms
   cout << "after scaling" << endl;
@@ -161,19 +167,28 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
 
     outValues afblankResult = CalculateFraction(h1Ped, i, kFALSE);
     outValues afsignalResult = CalculateFraction(h1, i, kFALSE);
-
-    Double_t occupancy = -TMath::Log(afsignalResult.belowTrs/(afblankResult.fraction*afsignalResult.totalN));
+    Double_t occupancy;
+    afsignalResult.belowTrs != 0? occupancy = -TMath::Log(afsignalResult.belowTrs/(afblankResult.fraction*afsignalResult.totalN)) : 0;
 
     grOccupancy -> SetPoint(Index, i, occupancy);
     grFraction-> SetPoint(Index, i, afblankResult.fraction);
+    dt -> SetPoint(Index, i, occupancy, afblankResult.fraction);
 
     // cout << Index;
     // cout << ") thrs = " << i << "\toccupancy = " << occupancy;
     // cout << "\tf = " << afblankResult.fraction << endl;
   }
 
-  
+  TCanvas * cThreshold = new TCanvas("cThreshold"," Threshold", w, h);
+  cThreshold -> Divide(1,2);
+  cThreshold -> cd(1);
+  grOccupancy -> Draw("AL*");
+  cThreshold -> cd(2);
+  grFraction -> Draw("AL*");
 
+  TCanvas * cg2 = new TCanvas("cg2"," Threshold, occupancy and fraction", w, h);
+  gStyle->SetPalette(1);
+  dt->Draw("surf1");
 
 	//TE->StartViewer();
 
