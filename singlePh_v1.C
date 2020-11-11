@@ -6,6 +6,11 @@
 #include "TH2.h"
 #include "TCanvas.h"
 #include "TStyle.h"
+#include "TLine.h"
+#include "TMath.h"
+#include <iostream>
+#include "TLatex.h"
+#include "TGraph.h"
 
 struct outValues{
     Double_t fraction = 0;
@@ -47,7 +52,7 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
 
   TString aFile = fileRoot;
   TFile *f = TFile::Open(aFile);
-  TTree *TESig = (TTree*)f->Get("RawDataTree");
+  TTree *TEblank = (TTree*)f->Get("RawDataTree");
   // TE->Print();
   // TE->Show(10);
 
@@ -57,8 +62,8 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
 
   gStyle->SetOptStat(0);
 
-  TESig->Draw("main_FDDref.Charge_GATE>>h1(1200,-300,0)", "", "GOFF");
-  TH1 *h1 = TESig->GetHistogram();
+  TEblank->Draw("main_FDDref.Charge_GATE>>h1(1200,-300,0)", "", "GOFF");
+  TH1 *h1 = TEblank->GetHistogram();
   h1->SetTitle("Charge distribution;Charge;Entries");
 
   Double_t w = 1400;
@@ -152,27 +157,28 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
 
   // Plots to checck the occupancy and fraction behavior at different thresholds
   TGraph *grOccupancy = new TGraph();
-  grOccupancy -> SetTitle("Ocupancy plot;Threshold (mV);Ocupancy");
+  grOccupancy -> SetTitle("Ocupancy plot;Threshold (mV);Ocupancy (#lambda) [PE/trigger]");
 
   TGraph *grFraction = new TGraph();
-  grFraction -> SetTitle("Fraction plot;Threshold (mV);Fraction");
+  grFraction -> SetTitle("Fraction plot;Threshold (mV);Fraction (f)");
 
-  TGraph2D *dt = new TGraph2D();
+  TGraph *grFracOccupancy = new TGraph();
+  grFracOccupancy -> SetTitle("Fraction vs Occupancy;Threshold fraction (f);Ocupancy (#lambda) [PE/trigger]");
 
 
   // Calculate occupancy using the scaled histograms
   cout << "after scaling" << endl;
   Int_t Index = 0;
-  for (Double_t i = -290; i < -100; i += 1, Index++){
+  for (Double_t i = -290; i < -200; i += 1, Index++){
 
     outValues afblankResult = CalculateFraction(h1Ped, i, kFALSE);
     outValues afsignalResult = CalculateFraction(h1, i, kFALSE);
     Double_t occupancy;
-    afsignalResult.belowTrs != 0? occupancy = -TMath::Log(afsignalResult.belowTrs/(afblankResult.fraction*afsignalResult.totalN)) : 0;
+    afsignalResult.belowTrs != 0? occupancy = -TMath::Log(double(afsignalResult.belowTrs)/double(afblankResult.fraction*afsignalResult.totalN)) : 0;
 
     grOccupancy -> SetPoint(Index, i, occupancy);
-    grFraction-> SetPoint(Index, i, afblankResult.fraction);
-    dt -> SetPoint(Index, i, occupancy, afblankResult.fraction);
+    grFraction -> SetPoint(Index, i, double(afblankResult.fraction));
+    grFracOccupancy -> SetPoint(Index, double(afblankResult.fraction), occupancy);
 
     // cout << Index;
     // cout << ") thrs = " << i << "\toccupancy = " << occupancy;
@@ -180,16 +186,13 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
   }
 
   TCanvas * cThreshold = new TCanvas("cThreshold"," Threshold", w, h);
-  cThreshold -> Divide(1,2);
+  cThreshold -> Divide(1,3);
   cThreshold -> cd(1);
   grOccupancy -> Draw("AL*");
   cThreshold -> cd(2);
   grFraction -> Draw("AL*");
-
-  TCanvas * cg2 = new TCanvas("cg2"," Threshold, occupancy and fraction", w, h);
-  gStyle->SetPalette(1);
-  dt->Draw("surf1");
-
+  cThreshold -> cd(3);
+  grFracOccupancy -> Draw("AL*");
 	//TE->StartViewer();
 
 }
