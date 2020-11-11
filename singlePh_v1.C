@@ -169,12 +169,13 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
   // Calculate occupancy using the scaled histograms
   cout << "after scaling" << endl;
   Int_t Index = 0;
+  Double_t occupancy;
+
   for (Double_t i = -290; i < -200; i += 1, Index++){
 
     outValues afblankResult = CalculateFraction(h1Ped, i, kFALSE);
     outValues afsignalResult = CalculateFraction(h1, i, kFALSE);
-    Double_t occupancy;
-    afsignalResult.belowTrs != 0? occupancy = -TMath::Log(double(afsignalResult.belowTrs)/double(afblankResult.fraction*afsignalResult.totalN)) : 0;
+    afsignalResult.belowTrs != 0? occupancy = -TMath::Log(double(afsignalResult.belowTrs)/(double(afblankResult.fraction)*double(afsignalResult.totalN))) : 0;
 
     grOccupancy -> SetPoint(Index, i, occupancy);
     grFraction -> SetPoint(Index, i, double(afblankResult.fraction));
@@ -193,6 +194,22 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
   grFraction -> Draw("AL*");
   cThreshold -> cd(3);
   grFracOccupancy -> Draw("AL*");
+
+  // Single photo-electron mean calculation E[\psi]= (E[T]-E[B])/E[L]
+  outValues afblankResult = CalculateFraction(h1Ped, -279, kFALSE);
+  outValues afsignalResult = CalculateFraction(h1, -279, kFALSE);
+  occupancy = -TMath::Log(double(afsignalResult.belowTrs)/(double(afblankResult.fraction)*double(afsignalResult.totalN)));
+  Double_t SPEmean = (signalMean - pedMean) / occupancy;
+  printf("E[psi] = (E[T]-E[B])/E[L] \n");
+  printf("E[psi] = (%.4f-%.4f)/%.4f = %.4f\n", signalMean, pedMean, occupancy, SPEmean);
+
+  // Single photo-electron Variance calculation V[\psi]= ((V[T]-V[B])/E[L]) - E[psi]
+  Double_t SPEVar = ((signalStdDev - pedStdDev) / occupancy) - SPEmean*SPEmean;
+  printf("V[psi] = (V[T]-V[B])/E[L] - E[psi]\n");
+  printf("V[psi] = (%.4f-%.4f)/%.4f - %.4f = %.4f\n", signalStdDev, pedStdDev, occupancy, SPEmean*SPEmean, SPEVar);
+
+  //TODO: Statitical uncertainties Eq. 16 from paper
+
 	//TE->StartViewer();
 
 }
