@@ -52,7 +52,7 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
 
   TString aFile = fileRoot;
   TFile *f = TFile::Open(aFile);
-  TTree *TEblank = (TTree*)f->Get("RawDataTree");
+  TTree *TELaser = (TTree*)f->Get("RawDataTree");
   // TE->Print();
   // TE->Show(10);
 
@@ -62,9 +62,9 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
 
   gStyle->SetOptStat(0);
 
-  TEblank->Draw("main_FDDref.Charge_GATE>>h1(1200,-300,0)", "", "GOFF");
-  TH1 *h1 = TEblank->GetHistogram();
-  h1->SetTitle("Charge distribution;Charge;Entries");
+  TELaser->Draw("main_FDDref.Charge_GATE>>h1(1200,-300,0)", " main_FDDref.Amplitude < 150 && main_FDDref.Amplitude > 50 ", "GOFF");
+  TH1 *h1 = TELaser->GetHistogram();
+  h1->SetTitle("Charge distribution;Charge (fC);Entries");
 
   Double_t w = 1400;
   Double_t h = 1000;
@@ -76,7 +76,7 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
 
   TEped->Draw("main_FDDref.Charge_GATE>>h1Ped(1200,-300,0)", "", "GOFF");
   TH1 *h1Ped = TEped->GetHistogram();
-  h1Ped->SetTitle("Charge distribution;Charge;Entries");
+  h1Ped->SetTitle("Charge distribution;Charge (fC);Entries");
 
   cout << "before scaling" << endl;
 
@@ -106,7 +106,7 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
   h1Ped->SetLineStyle(1);
 
   // Printing histograms in the same canvas
-  TCanvas * cped = new TCanvas("cped","Pedestal", w, h);
+  TCanvas * cped = new TCanvas("cped","Pedestal", w, h*0.6);
   cped->SetLogy();
   h1->Draw();
   h1Ped->Draw("B SAME");
@@ -196,17 +196,20 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
   grFracOccupancy -> Draw("AL*");
 
   // Single photo-electron mean calculation E[\psi]= (E[T]-E[B])/E[L]
-  outValues afblankResult = CalculateFraction(h1Ped, -279, kFALSE);
-  outValues afsignalResult = CalculateFraction(h1, -279, kFALSE);
+  outValues afblankResult = CalculateFraction(h1Ped, -280, kFALSE);
+  outValues afsignalResult = CalculateFraction(h1, -280, kFALSE);
   occupancy = -TMath::Log(double(afsignalResult.belowTrs)/(double(afblankResult.fraction)*double(afsignalResult.totalN)));
   Double_t SPEmean = (signalMean - pedMean) / occupancy;
+
   printf("E[psi] = (E[T]-E[B])/E[L] \n");
   printf("E[psi] = (%.4f-%.4f)/%.4f = %.4f\n", signalMean, pedMean, occupancy, SPEmean);
 
   // Single photo-electron Variance calculation V[\psi]= ((V[T]-V[B])/E[L]) - E[psi]
   Double_t SPEVar = ((signalStdDev - pedStdDev) / occupancy) - SPEmean*SPEmean;
+  Double_t SPEstdev = TMath::Sqrt( TMath::Abs(SPEVar));
   printf("V[psi] = (V[T]-V[B])/E[L] - E[psi]\n");
   printf("V[psi] = (%.4f-%.4f)/%.4f - %.4f = %.4f\n", signalStdDev, pedStdDev, occupancy, SPEmean*SPEmean, SPEVar);
+  printf("STDev[psi] = sqrt (V[psi]) = %.4f \n",SPEstdev);
 
   //TODO: Statitical uncertainties Eq. 16 from paper
 
