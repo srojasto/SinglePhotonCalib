@@ -19,9 +19,16 @@ struct outValues{
     Double_t totalN = 0;
 };
 
+struct SPEValues{
+  Double_t occupancy = 0;
+  Double_t mean =0;
+  Double_t variance =0;
+  Double_t stdDev = 0;
+  Double_t meanUncertainty = 0;
+  Double_t stdDevUncertainty = 0;
+};
 
-outValues CalculateFraction(TH1* histo, Double_t threshold, Bool_t print = kTRUE)
-{
+outValues CalculateFraction(TH1* histo, Double_t threshold, Bool_t print = kTRUE){
   // Calculate occupancy using the scaled histograms
   //test second branch modification
   outValues result;
@@ -47,6 +54,51 @@ outValues CalculateFraction(TH1* histo, Double_t threshold, Bool_t print = kTRUE
 
   return result;
 }
+
+SPEValues CalculateSPE(TH1* h1Signal, TH1* h1Blank, Double_t threshold, Bool_t print = kTRUE){
+
+  // Obtaining the mean and stdDev of the distributions
+  Double_t BlankMean = h1Blank -> GetMean();
+  Double_t BlankMeanError = h1Blank -> GetMeanError();
+  Double_t BlankStdDev = h1Blank -> GetStdDev();
+  Double_t BlankStdDevError = h1Blank -> GetStdDevError();
+
+  Double_t signalMean = h1Signal -> GetMean();
+  Double_t signalMeanError = h1Signal -> GetMeanError();
+  Double_t signalStdDev = h1Signal -> GetStdDev();
+  Double_t signalStdDevError = h1Signal -> GetStdDevError();
+
+  // Calculation of the SPE properties: occupancy, mean, standard deviation, etc..
+  SPEValues result;
+
+  // Single photo-electron mean calculation E[\psi]= (E[T]-E[B])/E[L]
+  outValues BlankResult = CalculateFraction(h1Blank, -280, kFALSE);
+  outValues SignalResult = CalculateFraction(h1Signal, -280, kFALSE);
+  result.occupancy = -TMath::Log(double(SignalResult.belowTrs)/(double(BlankResult.fraction)*double(SignalResult.totalN)));
+  result.mean = (h1Signal->GetMean() - h1Blank->GetMean()) / result.occupancy;
+
+  // Single photo-electron Variance calculation V[\psi]= ((V[T]-V[B])/E[L]) - E[psi]
+  result.variance = ((signalStdDev - BlankStdDev) / result.occupancy) - result.mean*result.mean;
+  result.stdDev = TMath::Sqrt( TMath::Abs(result.variance));
+
+  //Statitical uncertainties Eq. 16 from paper
+  result.meanUncertainty = (result.occupancy*(result.mean*result.mean + result.variance) + 2*BlankStdDev)/(double(SignalResult.totalN)*result.occupancy*result.occupancy) + (result.mean*result.mean * (TMath::Exp(result.occupancy) + 1 - (double(BlankResult.fraction)) ))/ (double(BlankResult.fraction)*double(SignalResult.totalN)*result.occupancy*result.occupancy);
+
+  result.stdDevUncertainty = 0;
+
+  if(print){
+    cout << "\n> Occupancy = " << result.occupancy;
+    cout << "\n> Mean: E[psi] = " << result.mean;
+    cout << "\n> Variance: V[psi] = " << result.variance;
+    cout << "\n> Sandard Dev.: STDev[psi] = " << result.stdDev;
+    cout << "\n> Mean Uncertainties: V[E[psi]] = " << result.meanUncertainty;
+    cout << "-> " << result.meanUncertainty*100 << " %%";
+    cout << endl;
+  }
+
+  return result;
+}
+
 
 void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedestal="pedestal.root"){
 
@@ -195,23 +247,8 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
   cThreshold -> cd(3);
   grFracOccupancy -> Draw("AL*");
 
-  // Single photo-electron mean calculation E[\psi]= (E[T]-E[B])/E[L]
-  outValues afblankResult = CalculateFraction(h1Ped, -280, kFALSE);
-  outValues afsignalResult = CalculateFraction(h1, -280, kFALSE);
-  occupancy = -TMath::Log(double(afsignalResult.belowTrs)/(double(afblankResult.fraction)*double(afsignalResult.totalN)));
-  Double_t SPEmean = (signalMean - pedMean) / occupancy;
 
-  printf("E[psi] = (E[T]-E[B])/E[L] \n");
-  printf("E[psi] = (%.4f-%.4f)/%.4f = %.4f\n", signalMean, pedMean, occupancy, SPEmean);
-
-  // Single photo-electron Variance calculation V[\psi]= ((V[T]-V[B])/E[L]) - E[psi]
-  Double_t SPEVar = ((signalStdDev - pedStdDev) / occupancy) - SPEmean*SPEmean;
-  Double_t SPEstdev = TMath::Sqrt( TMath::Abs(SPEVar));
-  printf("V[psi] = (V[T]-V[B])/E[L] - E[psi]\n");
-  printf("V[psi] = (%.4f-%.4f)/%.4f - %.4f = %.4f\n", signalStdDev, pedStdDev, occupancy, SPEmean*SPEmean, SPEVar);
-  printf("STDev[psi] = sqrt (V[psi]) = %.4f \n",SPEstdev);
-
-  //TODO: Statitical uncertainties Eq. 16 from paper
+  CalculateSPE(h1, h1Ped, -280, kTRUE);
 
 	//TE->StartViewer();
 
