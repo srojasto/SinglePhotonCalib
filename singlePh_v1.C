@@ -25,11 +25,11 @@ struct SPEValues{
   Double_t variance =0;
   Double_t stdDev = 0;
   Double_t meanUncertainty = 0;
-  Double_t stdDevUncertainty = 0;
+  Double_t VarianceUncertainty = 0;
 };
 
 outValues CalculateFraction(TH1* ,Double_t ,Bool_t );
-SPEValues CalculateSPE(TH1* h1Signal, TH1* h1Blank, Double_t threshold, Bool_t print = kTRUE);
+SPEValues CalculateSPE(TH1*, TH1*, Double_t, Bool_t );
 
 
 void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedestal="pedestal.root"){
@@ -167,38 +167,49 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
   TGraph *grFraction = new TGraph();
   grFraction -> SetTitle("Fraction plot;Threshold (pC);Fraction (f)");
 
-  TGraph *grFracOccupancy = new TGraph();
-  grFracOccupancy -> SetTitle("Fraction vs Occupancy;Threshold fraction (f);Ocupancy (#lambda) [PE/trigger]");
+  TGraph *grMeanUncert = new TGraph();
+  grMeanUncert -> SetTitle("Mean Uncertainty;Threshold (pC);Uncertainty");
 
+  TGraph *grVarianceUncert = new TGraph();
+  grVarianceUncert -> SetTitle("Standrd Deviation Uncertainty;Threshold (pC);Uncertainty");
 
   // Calculate occupancy using the scaled histograms
   cout << "after scaling" << endl;
   Int_t Index = 0;
   Double_t occupancy;
+  SPEValues SPEResult;
 
-  for (Double_t i = -290; i < -200; i += 1, Index++){
+  for (Double_t i = -285; i < -200; i += 1, Index++){
 
     outValues afblankResult = CalculateFraction(h1Ped, i, kFALSE);
     outValues afsignalResult = CalculateFraction(h1, i, kFALSE);
-    afsignalResult.belowTrs != 0? occupancy = -TMath::Log(double(afsignalResult.belowTrs)/(double(afblankResult.fraction)*double(afsignalResult.totalN))) : 0;
 
-    grOccupancy -> SetPoint(Index, i, occupancy);
+    SPEResult = CalculateSPE(h1, h1Ped, i, kFALSE);
+    grOccupancy -> SetPoint(Index, i, SPEResult.occupancy);
     grFraction -> SetPoint(Index, i, double(afblankResult.fraction));
-    grFracOccupancy -> SetPoint(Index, double(afblankResult.fraction), occupancy);
+    grMeanUncert -> SetPoint(Index, i, SPEResult.meanUncertainty);
+    grVarianceUncert -> SetPoint(Index, i, SPEResult.VarianceUncertainty);
 
-    // cout << Index;
-    // cout << ") thrs = " << i << "\toccupancy = " << occupancy;
-    // cout << "\tf = " << afblankResult.fraction << endl;
+     // cout << Index;
+     // cout << ") thrs = " << i << "\toccupancy = " << occupancy << "\t  SPEOcupancy = " << SPEResult.occupancy;
+     // cout << "denominador = " << double(afblankResult.fraction)*double(afsignalResult.totalN);
+     // cout << "\tf = " << afblankResult.fraction << endl;
   }
 
   TCanvas * cThreshold = new TCanvas("cThreshold"," Threshold", w, h);
-  cThreshold -> Divide(1,3);
+  cThreshold -> Divide(1,2);
   cThreshold -> cd(1);
   grOccupancy -> Draw("AL*");
   cThreshold -> cd(2);
   grFraction -> Draw("AL*");
-  cThreshold -> cd(3);
-  grFracOccupancy -> Draw("AL*");
+
+
+  TCanvas * cUncert = new TCanvas("cUncert"," Uncertainty", w, h);
+  cUncert -> Divide(1,2);
+  cUncert -> cd(1) -> SetLogy();
+  grMeanUncert -> Draw("AL*");
+  cUncert -> cd(2) -> SetLogy();
+  grVarianceUncert -> Draw("AL*");
 
 
   CalculateSPE(h1, h1Ped, -280, kTRUE);
@@ -251,19 +262,30 @@ SPEValues CalculateSPE(TH1* h1Signal, TH1* h1Blank, Double_t threshold, Bool_t p
   SPEValues result;
 
   // Single photo-electron mean calculation E[\psi]= (E[T]-E[B])/E[L]
-  outValues BlankResult = CalculateFraction(h1Blank, -280, kFALSE);
-  outValues SignalResult = CalculateFraction(h1Signal, -280, kFALSE);
+  outValues BlankResult = CalculateFraction(h1Blank, threshold, kFALSE);
+  outValues SignalResult = CalculateFraction(h1Signal, threshold, kFALSE);
   result.occupancy = -TMath::Log(double(SignalResult.belowTrs)/(double(BlankResult.fraction)*double(SignalResult.totalN)));
-  result.mean = (h1Signal->GetMean() - h1Blank->GetMean()) / result.occupancy;
 
-  // Single photo-electron Variance calculation V[\psi]= ((V[T]-V[B])/E[L]) - E[psi]
-  result.variance = ((signalStdDev - BlankStdDev) / result.occupancy) - result.mean*result.mean;
-  result.stdDev = TMath::Sqrt( TMath::Abs(result.variance));
+  if (result.occupancy != 0 && SignalResult.totalN != 0){
+    result.mean = (h1Signal->GetMean() - h1Blank->GetMean()) / result.occupancy;
 
-  //Statitical uncertainties Eq. 16 from paper
-  result.meanUncertainty = (result.occupancy*(result.mean*result.mean + result.variance) + 2*BlankStdDev)/(double(SignalResult.totalN)*result.occupancy*result.occupancy) + (result.mean*result.mean * (TMath::Exp(result.occupancy) + 1 - (double(BlankResult.fraction)) ))/ (double(BlankResult.fraction)*double(SignalResult.totalN)*result.occupancy*result.occupancy);
+    // Single photo-electron Variance calculation V[\psi]= ((V[T]-V[B])/E[L]) - E[psi]
+    result.variance = ((signalStdDev - BlankStdDev) / result.occupancy) - result.mean*result.mean;
+    result.stdDev = TMath::Sqrt( TMath::Abs(result.variance));
 
-  result.stdDevUncertainty = 0;
+    //Statitical uncertainties Eq. 16 from paper
+    result.meanUncertainty = (result.occupancy*(result.mean*result.mean + result.variance) + 2*BlankStdDev)/(double(SignalResult.totalN)*result.occupancy*result.occupancy) + (result.mean*result.mean * (TMath::Exp(result.occupancy) + 1 - 2*double(BlankResult.fraction)))/ (double(BlankResult.fraction)*double(SignalResult.totalN)*result.occupancy*result.occupancy);
+
+    //Statitical uncertainties Eq. 16 from paper
+    result.VarianceUncertainty = ((result.mean*result.mean + result.variance)*(result.mean*result.mean + result.variance)*(TMath::Exp(result.occupancy) + 1 - 2*double(BlankResult.fraction)) )/(double(SignalResult.totalN)*result.occupancy*result.occupancy);
+  }
+  else{
+    result.mean  = 0;
+    result.variance = 0;
+    result.stdDev = 0;
+    result.meanUncertainty = 0;
+    result.VarianceUncertainty = 0;
+  }
 
   if(print){
     cout << "\n> Occupancy = " << result.occupancy;
@@ -271,7 +293,9 @@ SPEValues CalculateSPE(TH1* h1Signal, TH1* h1Blank, Double_t threshold, Bool_t p
     cout << "\n> Variance: V[psi] = " << result.variance;
     cout << "\n> Sandard Dev.: STDev[psi] = " << result.stdDev;
     cout << "\n> Mean Uncertainties: V[E[psi]] = " << result.meanUncertainty;
-    cout << "-> " << result.meanUncertainty*100 << "%\n";
+    cout << "-> " << result.meanUncertainty*100 << "%";
+    cout << "\n> StdDev Uncertainties: V[V[psi]] = " << result.VarianceUncertainty;
+    cout << "-> " << result.VarianceUncertainty*100 << "%\n";
     cout << endl;
   }
 
