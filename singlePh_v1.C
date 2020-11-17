@@ -28,76 +28,8 @@ struct SPEValues{
   Double_t stdDevUncertainty = 0;
 };
 
-outValues CalculateFraction(TH1* histo, Double_t threshold, Bool_t print = kTRUE){
-  // Calculate occupancy using the scaled histograms
-  //test second branch modification
-  outValues result;
-
-  Int_t TrsBin = histo ->  FindBin(threshold);
-  Int_t MinBin = histo ->  GetMinimumBin();
-  Int_t MaxBin = histo ->  GetMaximumBin();
-
-  result.belowTrs = histo->Integral(MinBin,TrsBin);
-  result.overTrs = histo->Integral(TrsBin+1,MaxBin);
-  result.totalN = histo->Integral();
-  result.fraction = result.belowTrs/result.totalN;
-
-  if(print){
-    cout << "Threshold bin = " << histo ->  FindBin(threshold);
-    cout << "\tMinimum bin = " << histo ->  GetMinimumBin();
-    cout << "\tMaximum bin = " << histo ->  GetMaximumBin() << endl;
-    cout << "belowTrs integral = " << result.belowTrs;
-    cout << "\toverTrs integral = " << result.overTrs << endl;
-    cout << "belowTrs + overTrs = " << result.belowTrs + result.overTrs << " while the totalN = " <<  result.totalN << endl;
-    cout << "fraction = " << result.fraction <<"\n\n";
-  }
-
-  return result;
-}
-
-SPEValues CalculateSPE(TH1* h1Signal, TH1* h1Blank, Double_t threshold, Bool_t print = kTRUE){
-
-  // Obtaining the mean and stdDev of the distributions
-  Double_t BlankMean = h1Blank -> GetMean();
-  Double_t BlankMeanError = h1Blank -> GetMeanError();
-  Double_t BlankStdDev = h1Blank -> GetStdDev();
-  Double_t BlankStdDevError = h1Blank -> GetStdDevError();
-
-  Double_t signalMean = h1Signal -> GetMean();
-  Double_t signalMeanError = h1Signal -> GetMeanError();
-  Double_t signalStdDev = h1Signal -> GetStdDev();
-  Double_t signalStdDevError = h1Signal -> GetStdDevError();
-
-  // Calculation of the SPE properties: occupancy, mean, standard deviation, etc..
-  SPEValues result;
-
-  // Single photo-electron mean calculation E[\psi]= (E[T]-E[B])/E[L]
-  outValues BlankResult = CalculateFraction(h1Blank, -280, kFALSE);
-  outValues SignalResult = CalculateFraction(h1Signal, -280, kFALSE);
-  result.occupancy = -TMath::Log(double(SignalResult.belowTrs)/(double(BlankResult.fraction)*double(SignalResult.totalN)));
-  result.mean = (h1Signal->GetMean() - h1Blank->GetMean()) / result.occupancy;
-
-  // Single photo-electron Variance calculation V[\psi]= ((V[T]-V[B])/E[L]) - E[psi]
-  result.variance = ((signalStdDev - BlankStdDev) / result.occupancy) - result.mean*result.mean;
-  result.stdDev = TMath::Sqrt( TMath::Abs(result.variance));
-
-  //Statitical uncertainties Eq. 16 from paper
-  result.meanUncertainty = (result.occupancy*(result.mean*result.mean + result.variance) + 2*BlankStdDev)/(double(SignalResult.totalN)*result.occupancy*result.occupancy) + (result.mean*result.mean * (TMath::Exp(result.occupancy) + 1 - (double(BlankResult.fraction)) ))/ (double(BlankResult.fraction)*double(SignalResult.totalN)*result.occupancy*result.occupancy);
-
-  result.stdDevUncertainty = 0;
-
-  if(print){
-    cout << "\n> Occupancy = " << result.occupancy;
-    cout << "\n> Mean: E[psi] = " << result.mean;
-    cout << "\n> Variance: V[psi] = " << result.variance;
-    cout << "\n> Sandard Dev.: STDev[psi] = " << result.stdDev;
-    cout << "\n> Mean Uncertainties: V[E[psi]] = " << result.meanUncertainty;
-    cout << "-> " << result.meanUncertainty*100 << " %%";
-    cout << endl;
-  }
-
-  return result;
-}
+outValues CalculateFraction(TH1* ,Double_t ,Bool_t );
+SPEValues CalculateSPE(TH1* h1Signal, TH1* h1Blank, Double_t threshold, Bool_t print = kTRUE);
 
 
 void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedestal="pedestal.root"){
@@ -114,7 +46,20 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
 
   gStyle->SetOptStat(0);
 
-  TELaser->Draw("main_FDDref.Charge_GATE>>h1(1200,-300,0)", " main_FDDref.Amplitude < 150 && main_FDDref.Amplitude > 50 ", "GOFF");
+  TELaser->Draw("main_FDDref.Amplitude>>h1LaserAmp(1200,0,1200)", "", "GOFF");
+  TH1 *h1LaserAmp = TELaser->GetHistogram();
+  h1LaserAmp->SetTitle("Amplitude distribution Laser Induced;Amplitude (mV);Entries");
+
+  TELaser->Draw("main_FDDref.Charge_GATE:main_FDDref.Amplitude>>h2AmpCharge(1200,0,1200, 1200,-300,0)", "", "GOFF");
+  TH1 *h2AmpCharge = TELaser->GetHistogram();
+  h2AmpCharge->SetTitle("Amplitude distribution Laser Induced;Amplitude (mV);Charge (fC);Entries");
+
+  TEped->Draw("main_FDDref.Charge_GATE:main_FDDref.Amplitude>>h2BlankAmpCharge(1200,0,1200, 1200,-300,0)", "", "GOFF");
+  TH1 *h2BlankAmpCharge = TEped->GetHistogram();
+  h2BlankAmpCharge->SetTitle("Amplitude distribution Blank;Amplitude (mV);Charge (fC);Entries");
+
+  TELaser->Draw("main_FDDref.Charge_GATE>>h1(1200,-300,0)", "", "GOFF");
+  //TELaser->Draw("main_FDDref.Charge_GATE>>h1(1200,-300,0)", " main_FDDref.Amplitude < 150 && main_FDDref.Amplitude > 50 ", "GOFF");
   TH1 *h1 = TELaser->GetHistogram();
   h1->SetTitle("Charge distribution;Charge (fC);Entries");
 
@@ -122,8 +67,16 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
   Double_t h = 1000;
   Double_t threshold = -250;
   TCanvas * c1 = new TCanvas("c1","Signal charge", w, h);
-  c1->SetLogy();
+  c1 -> Divide(2,2);
+  c1 -> cd(1)->SetLogy();
   h1->Draw();
+  c1 -> cd(2)->SetLogy();
+  h1LaserAmp -> Draw();
+  c1 -> cd(3) -> SetLogz();
+  h2AmpCharge -> Draw("COLZ");
+  h2BlankAmpCharge -> SetLineColor(kRed);
+  h2BlankAmpCharge -> Draw("SAME Cont2");
+  c1 -> cd(4) -> SetLogz();
 
 
   TEped->Draw("main_FDDref.Charge_GATE>>h1Ped(1200,-300,0)", "", "GOFF");
@@ -133,8 +86,8 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
   cout << "before scaling" << endl;
 
   // Calculation of fraction of the defined threshold
-  outValues blankResult = CalculateFraction(h1Ped, threshold);
-  outValues signalResult = CalculateFraction(h1, threshold);
+  outValues blankResult = CalculateFraction(h1Ped, threshold, kTRUE);
+  outValues signalResult = CalculateFraction(h1, threshold, kTRUE);
 
 
 
@@ -209,10 +162,10 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
 
   // Plots to checck the occupancy and fraction behavior at different thresholds
   TGraph *grOccupancy = new TGraph();
-  grOccupancy -> SetTitle("Ocupancy plot;Threshold (mV);Ocupancy (#lambda) [PE/trigger]");
+  grOccupancy -> SetTitle("Ocupancy plot;Threshold (pC);Ocupancy (#lambda) [PE/trigger]");
 
   TGraph *grFraction = new TGraph();
-  grFraction -> SetTitle("Fraction plot;Threshold (mV);Fraction (f)");
+  grFraction -> SetTitle("Fraction plot;Threshold (pC);Fraction (f)");
 
   TGraph *grFracOccupancy = new TGraph();
   grFracOccupancy -> SetTitle("Fraction vs Occupancy;Threshold fraction (f);Ocupancy (#lambda) [PE/trigger]");
@@ -252,4 +205,75 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
 
 	//TE->StartViewer();
 
+}
+
+outValues CalculateFraction(TH1* histo, Double_t threshold, Bool_t print = kTRUE){
+  // Calculate occupancy using the scaled histograms
+  //test second branch modification
+  outValues result;
+
+  Int_t TrsBin = histo ->  FindBin(threshold);
+  Int_t MinBin = histo ->  GetMinimumBin();
+  Int_t MaxBin = histo ->  GetMaximumBin();
+
+  result.belowTrs = histo->Integral(MinBin,TrsBin);
+  result.overTrs = histo->Integral(TrsBin+1,MaxBin);
+  result.totalN = histo->Integral();
+  result.fraction = result.belowTrs/result.totalN;
+
+  if(print){
+    cout << "Threshold bin = " << histo ->  FindBin(threshold);
+    cout << "\tMinimum bin = " << histo ->  GetMinimumBin();
+    cout << "\tMaximum bin = " << histo ->  GetMaximumBin() << endl;
+    cout << "belowTrs integral = " << result.belowTrs;
+    cout << "\toverTrs integral = " << result.overTrs << endl;
+    cout << "belowTrs + overTrs = " << result.belowTrs + result.overTrs << " while the totalN = " <<  result.totalN << endl;
+    cout << "fraction = " << result.fraction <<"\n\n";
+  }
+
+  return result;
+}
+
+SPEValues CalculateSPE(TH1* h1Signal, TH1* h1Blank, Double_t threshold, Bool_t print = kTRUE){
+
+  // Obtaining the mean and stdDev of the distributions
+  Double_t BlankMean = h1Blank -> GetMean();
+  Double_t BlankMeanError = h1Blank -> GetMeanError();
+  Double_t BlankStdDev = h1Blank -> GetStdDev();
+  Double_t BlankStdDevError = h1Blank -> GetStdDevError();
+
+  Double_t signalMean = h1Signal -> GetMean();
+  Double_t signalMeanError = h1Signal -> GetMeanError();
+  Double_t signalStdDev = h1Signal -> GetStdDev();
+  Double_t signalStdDevError = h1Signal -> GetStdDevError();
+
+  // Calculation of the SPE properties: occupancy, mean, standard deviation, etc..
+  SPEValues result;
+
+  // Single photo-electron mean calculation E[\psi]= (E[T]-E[B])/E[L]
+  outValues BlankResult = CalculateFraction(h1Blank, -280, kFALSE);
+  outValues SignalResult = CalculateFraction(h1Signal, -280, kFALSE);
+  result.occupancy = -TMath::Log(double(SignalResult.belowTrs)/(double(BlankResult.fraction)*double(SignalResult.totalN)));
+  result.mean = (h1Signal->GetMean() - h1Blank->GetMean()) / result.occupancy;
+
+  // Single photo-electron Variance calculation V[\psi]= ((V[T]-V[B])/E[L]) - E[psi]
+  result.variance = ((signalStdDev - BlankStdDev) / result.occupancy) - result.mean*result.mean;
+  result.stdDev = TMath::Sqrt( TMath::Abs(result.variance));
+
+  //Statitical uncertainties Eq. 16 from paper
+  result.meanUncertainty = (result.occupancy*(result.mean*result.mean + result.variance) + 2*BlankStdDev)/(double(SignalResult.totalN)*result.occupancy*result.occupancy) + (result.mean*result.mean * (TMath::Exp(result.occupancy) + 1 - (double(BlankResult.fraction)) ))/ (double(BlankResult.fraction)*double(SignalResult.totalN)*result.occupancy*result.occupancy);
+
+  result.stdDevUncertainty = 0;
+
+  if(print){
+    cout << "\n> Occupancy = " << result.occupancy;
+    cout << "\n> Mean: E[psi] = " << result.mean;
+    cout << "\n> Variance: V[psi] = " << result.variance;
+    cout << "\n> Sandard Dev.: STDev[psi] = " << result.stdDev;
+    cout << "\n> Mean Uncertainties: V[E[psi]] = " << result.meanUncertainty;
+    cout << "-> " << result.meanUncertainty*100 << "%\n";
+    cout << endl;
+  }
+
+  return result;
 }
