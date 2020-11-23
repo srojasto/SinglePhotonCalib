@@ -46,42 +46,53 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
 
   gStyle->SetOptStat(0);
 
-  TELaser->Draw("main_FDDref.Amplitude>>h1LaserAmp(1200,0,1200)", "", "GOFF");
+  //------------------------------------------------------
+  // Parameters secction
+  //------------------------------------------------------
+  Char_t* SChannel = (char*)"main_FDDD";
+  Double_t AmpWindowMin = 30;
+  Double_t AmpWindowMax = 100;
+  Double_t AmpWindowSaturation = 970;
+
+  //------------------------------------------------------
+  //------------------------------------------------------
+
+  TELaser->Draw(TString::Format("%s.Amplitude>>h1LaserAmp(1200,0,1200)", SChannel), "", "GOFF");
   TH1 *h1LaserAmp = TELaser->GetHistogram();
   h1LaserAmp->SetTitle("Amplitude distribution Laser Induced;Amplitude (mV);Entries");
 
-  TELaser->Draw("main_FDDref.Charge_GATE:main_FDDref.Amplitude>>h2AmpCharge(1200,0,1200, 1200,-300,0)", "", "GOFF");
+  TELaser->Draw(TString::Format("%s.Charge_GATE:%s.Amplitude>>h2AmpCharge(1200,0,1200, 1200,-300,0)", SChannel, SChannel), "", "GOFF");
   TH1 *h2AmpCharge = TELaser->GetHistogram();
   h2AmpCharge->SetTitle("Amplitude distribution Laser Induced;Amplitude (mV);Charge (fC);Entries");
 
-  TEped->Draw("main_FDDref.Charge_GATE:main_FDDref.Amplitude>>h2BlankAmpCharge(1200,0,1200, 1200,-300,0)", "", "GOFF");
+  TEped->Draw(TString::Format("%s.Charge_GATE:%s.Amplitude>>h2BlankAmpCharge(1200,0,1200, 1200,-300,0)",SChannel, SChannel), "", "GOFF");
   TH1 *h2BlankAmpCharge = TEped->GetHistogram();
   h2BlankAmpCharge->SetTitle("Amplitude distribution Blank;Amplitude (mV);Charge (fC);Entries");
 
-  TELaser->Draw("main_FDDref.Charge_GATE>>h1(1200,-300,0)", "", "GOFF");
+  TELaser->Draw(TString::Format("%s.Charge_GATE>>h1(1200,-300,0)", SChannel), "", "GOFF");
   //TELaser->Draw("main_FDDref.Charge_GATE>>h1(1200,-300,0)", " main_FDDref.Amplitude < 150 && main_FDDref.Amplitude > 50 ", "GOFF");
   TH1 *h1 = TELaser->GetHistogram();
   h1->SetTitle("Charge distribution;Charge (fC);Entries");
 
-  TELaser->Draw("main_FDDref.Charge_GATE>>h1ChargeCut(1200,-300,0)", " main_FDDref.Amplitude < 150 && main_FDDref.Amplitude > 50 ", "GOFF");
+  TELaser->Draw(TString::Format("%s.Charge_GATE>>h1ChargeCut(1200,-300,0)", SChannel), TString::Format(" %s.Amplitude > %f && %s.Amplitude < %f ", SChannel, AmpWindowMin, SChannel, AmpWindowMax), "GOFF");
   TH1 *h1ChargeCut = TELaser->GetHistogram();
   h1ChargeCut->SetTitle("Charge distribution;Charge (fC);Entries");
   h1ChargeCut -> SetLineColor(kMagenta);
 
-  TELaser->Draw("main_FDDref.Charge_GATE>>h1ChargeCutOver(1200,-300,0)", " main_FDDref.Amplitude > 150 && main_FDDref.Amplitude < 970 ", "GOFF");
+  TELaser->Draw(TString::Format("%s.Charge_GATE>>h1ChargeCutOver(1200,-300,0)", SChannel), TString::Format(" %s.Amplitude > %f && %s.Amplitude < %f ", SChannel, AmpWindowMax, SChannel, AmpWindowSaturation), "GOFF");
   TH1 *h1ChargeCutOver = TELaser->GetHistogram();
   h1ChargeCutOver->SetTitle("Charge distribution;Charge (fC);Entries");
   h1ChargeCutOver -> SetLineColor(kMagenta+2);
 
 
-  TELaser->Draw("main_FDDref.Charge_GATE>>h1ChargeCutUnder(1200,-300,0)", " main_FDDref.Amplitude < 50  ", "GOFF");
+  TELaser->Draw(TString::Format("%s.Charge_GATE>>h1ChargeCutUnder(1200,-300,0)", SChannel), TString::Format(" %s.Amplitude < %f  ",SChannel ,AmpWindowMin), "GOFF");
   TH1 *h1ChargeCutUnder = TELaser->GetHistogram();
   h1ChargeCutUnder->SetTitle("Charge distribution;Charge (fC);Entries");
   h1ChargeCutUnder -> SetLineColor(kMagenta+4);
 
   Double_t w = 1400;
   Double_t h = 1000;
-  Double_t threshold = -250;
+  Double_t threshold = -270;
   TCanvas * c1 = new TCanvas("c1","Signal charge", w, h);
   c1 -> Divide(2,2);
   c1 -> cd(1)->SetLogy();
@@ -100,7 +111,7 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
   h1LaserAmp -> Draw();
 
 
-  TEped->Draw("main_FDDref.Charge_GATE>>h1Ped(1200,-300,0)", "", "GOFF");
+  TEped->Draw(TString::Format("%s.Charge_GATE>>h1Ped(1200,-300,0)", SChannel), "", "GOFF");
   TH1 *h1Ped = TEped->GetHistogram();
   h1Ped->SetTitle("Charge distribution;Charge (fC);Entries");
 
@@ -206,7 +217,7 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
   Double_t occupancy;
   SPEValues SPEResult;
 
-  for (Double_t i = -285; i < -200; i += 1, Index++){
+  for (Double_t i = -272; i < -200; i += 1, Index++){
 
     outValues afblankResult = CalculateFraction(h1Ped, i, kFALSE);
     outValues afsignalResult = CalculateFraction(h1, i, kFALSE);
@@ -250,7 +261,7 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
   grVarianceUncert -> Draw("AL*");
 
 
-  CalculateSPE(h1, h1Ped, -280, kTRUE);
+  CalculateSPE(h1, h1Ped, -270, kTRUE);
 
 	//TE->StartViewer();
 
