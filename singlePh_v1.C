@@ -63,6 +63,22 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
   TH1 *h1 = TELaser->GetHistogram();
   h1->SetTitle("Charge distribution;Charge (fC);Entries");
 
+  TELaser->Draw("main_FDDref.Charge_GATE>>h1ChargeCut(1200,-300,0)", " main_FDDref.Amplitude < 150 && main_FDDref.Amplitude > 50 ", "GOFF");
+  TH1 *h1ChargeCut = TELaser->GetHistogram();
+  h1ChargeCut->SetTitle("Charge distribution;Charge (fC);Entries");
+  h1ChargeCut -> SetLineColor(kMagenta);
+
+  TELaser->Draw("main_FDDref.Charge_GATE>>h1ChargeCutOver(1200,-300,0)", " main_FDDref.Amplitude > 150 && main_FDDref.Amplitude < 970 ", "GOFF");
+  TH1 *h1ChargeCutOver = TELaser->GetHistogram();
+  h1ChargeCutOver->SetTitle("Charge distribution;Charge (fC);Entries");
+  h1ChargeCutOver -> SetLineColor(kMagenta+2);
+
+
+  TELaser->Draw("main_FDDref.Charge_GATE>>h1ChargeCutUnder(1200,-300,0)", " main_FDDref.Amplitude < 50  ", "GOFF");
+  TH1 *h1ChargeCutUnder = TELaser->GetHistogram();
+  h1ChargeCutUnder->SetTitle("Charge distribution;Charge (fC);Entries");
+  h1ChargeCutUnder -> SetLineColor(kMagenta+4);
+
   Double_t w = 1400;
   Double_t h = 1000;
   Double_t threshold = -250;
@@ -70,13 +86,18 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
   c1 -> Divide(2,2);
   c1 -> cd(1)->SetLogy();
   h1->Draw();
-  c1 -> cd(2)->SetLogy();
-  h1LaserAmp -> Draw();
-  c1 -> cd(3) -> SetLogz();
+  h1ChargeCut -> Draw("SAME");
+  h1ChargeCutOver -> Draw("SAME");
+  h1ChargeCutUnder -> Draw("SAME");
+  c1 -> cd(2) -> SetLogz();
   h2AmpCharge -> Draw("COLZ");
   h2BlankAmpCharge -> SetLineColor(kRed);
   h2BlankAmpCharge -> Draw("SAME Cont2");
-  c1 -> cd(4) -> SetLogz();
+  c1 -> cd(3) -> SetLogz();
+  // Draw charge after cutting
+  h1ChargeCut -> Draw();
+  c1 -> cd(4)->SetLogy();
+  h1LaserAmp -> Draw();
 
 
   TEped->Draw("main_FDDref.Charge_GATE>>h1Ped(1200,-300,0)", "", "GOFF");
@@ -167,6 +188,12 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
   TGraph *grFraction = new TGraph();
   grFraction -> SetTitle("Fraction plot;Threshold (pC);Fraction (f)");
 
+  TGraph *grMean = new TGraph();
+  grMean -> SetTitle("Mean ;Threshold (pC); Mean Chargue (pC)");
+
+  TGraph *grVariance = new TGraph();
+  grVariance -> SetTitle("Standrd Deviation;Threshold (pC);Variance (pC)");
+
   TGraph *grMeanUncert = new TGraph();
   grMeanUncert -> SetTitle("Mean Uncertainty;Threshold (pC);Uncertainty");
 
@@ -187,6 +214,10 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
     SPEResult = CalculateSPE(h1, h1Ped, i, kFALSE);
     grOccupancy -> SetPoint(Index, i, SPEResult.occupancy);
     grFraction -> SetPoint(Index, i, double(afblankResult.fraction));
+
+    grMean -> SetPoint(Index, i, SPEResult.mean);
+    grVariance -> SetPoint(Index, i, SPEResult.variance);
+
     grMeanUncert -> SetPoint(Index, i, SPEResult.meanUncertainty);
     grVarianceUncert -> SetPoint(Index, i, SPEResult.VarianceUncertainty);
 
@@ -202,6 +233,13 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
   grOccupancy -> Draw("AL*");
   cThreshold -> cd(2);
   grFraction -> Draw("AL*");
+
+  TCanvas * cMeanVar = new TCanvas("cMeanVar","Mean and Variance", w, h);
+  cMeanVar -> Divide(1,2);
+  cMeanVar -> cd(1);
+  grMean -> Draw("AL*");
+  cMeanVar -> cd(2);
+  grVariance -> Draw("AL*");
 
 
   TCanvas * cUncert = new TCanvas("cUncert"," Uncertainty", w, h);
