@@ -32,7 +32,7 @@ outValues CalculateFraction(TH1* ,Double_t ,Bool_t );
 SPEValues CalculateSPE(TH1*, TH1*, Double_t, Bool_t );
 
 
-void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedestal="pedestal.root"){
+void singlePh_v1(const Char_t* SChannel = "main_FDDref", Double_t AmpWindowMin = 50, Double_t AmpWindowMax = 1010, const Char_t* fileRoot="results.root",const Char_t* filePedestal="pedestal.root"){
 
   TString aFile = fileRoot;
   TFile *f = TFile::Open(aFile);
@@ -49,10 +49,11 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
   //------------------------------------------------------
   // Parameters secction
   //------------------------------------------------------
-  Char_t* SChannel = (char*)"main_FDDD";
-  Double_t AmpWindowMin = 30;
-  Double_t AmpWindowMax = 100;
-  Double_t AmpWindowSaturation = 970;
+  //Char_t* SChannel = (char*)"main_FDDref";
+  //Double_t AmpWindowMin = 50;
+  //Double_t AmpWindowMax = 1000;
+  Double_t AmpWindowSaturation = 1080;
+  Double_t threshold = -283;
 
   //------------------------------------------------------
   //------------------------------------------------------
@@ -92,7 +93,6 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
 
   Double_t w = 1400;
   Double_t h = 1000;
-  Double_t threshold = -270;
   TCanvas * c1 = new TCanvas("c1","Signal charge", w, h);
   c1 -> Divide(2,2);
   c1 -> cd(1)->SetLogy();
@@ -217,7 +217,7 @@ void singlePh_v1(const Char_t* fileRoot="results.root",const Char_t* filePedesta
   Double_t occupancy;
   SPEValues SPEResult;
 
-  for (Double_t i = -272; i < -200; i += 1, Index++){
+  for (Double_t i = threshold; i < -200; i += 1, Index++){
 
     outValues afblankResult = CalculateFraction(h1Ped, i, kFALSE);
     outValues afsignalResult = CalculateFraction(h1, i, kFALSE);
