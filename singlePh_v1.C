@@ -158,7 +158,7 @@ void singlePh_v1(const Char_t* SChannel = "main_FDDref", Double_t AmpWindowMin =
   Double_t signalMeanError = h1 -> GetMeanError();
   Double_t signalStdDev = h1 -> GetStdDev();
   Double_t signalStdDevError = h1 -> GetStdDevError();
-
+  printf("\nRMS = %f StdDev = %f\n",h1 -> GetRMS(), h1 -> GetStdDev());
 
   TLine *pedLine = new TLine(pedMean ,0 ,pedMean,nSig+nSig*1);
   pedLine -> SetLineColor(kRed);
@@ -299,13 +299,13 @@ SPEValues CalculateSPE(TH1* h1Signal, TH1* h1Blank, Double_t threshold, Bool_t p
   // Obtaining the mean and stdDev of the distributions
   Double_t BlankMean = h1Blank -> GetMean();
   Double_t BlankMeanError = h1Blank -> GetMeanError();
-  Double_t BlankStdDev = h1Blank -> GetStdDev();
-  Double_t BlankStdDevError = h1Blank -> GetStdDevError();
+  Double_t BlankVariance = h1Blank -> GetStdDev()*h1Blank -> GetStdDev(); //Variance = StdDev^2
+  Double_t BlankVarianceError = h1Blank -> GetStdDevError();
 
   Double_t signalMean = h1Signal -> GetMean();
   Double_t signalMeanError = h1Signal -> GetMeanError();
-  Double_t signalStdDev = h1Signal -> GetStdDev();
-  Double_t signalStdDevError = h1Signal -> GetStdDevError();
+  Double_t signalVariance = h1Signal -> GetStdDev()*h1Signal -> GetStdDev();//Variance = StdDev^2
+  Double_t signalVarianceError = h1Signal -> GetStdDevError();
 
   // Calculation of the SPE properties: occupancy, mean, standard deviation, etc..
   SPEValues result;
@@ -318,12 +318,12 @@ SPEValues CalculateSPE(TH1* h1Signal, TH1* h1Blank, Double_t threshold, Bool_t p
   if (result.occupancy != 0 && SignalResult.totalN != 0){
     result.mean = (h1Signal->GetMean() - h1Blank->GetMean()) / result.occupancy;
 
-    // Single photo-electron Variance calculation V[\psi]= ((V[T]-V[B])/E[L]) - E[psi]
-    result.variance = ((signalStdDev - BlankStdDev) / result.occupancy) - result.mean*result.mean;
+    // Single photo-electron Variance calculation V[\psi]= ((V[T]-V[B])/E[L]) - E[psi]^2
+    result.variance = ((signalVariance - BlankVariance) / result.occupancy) - result.mean*result.mean;
     result.stdDev = TMath::Sqrt( TMath::Abs(result.variance));
 
     //Statitical uncertainties Eq. 16 from paper
-    result.meanUncertainty = (result.occupancy*(result.mean*result.mean + result.variance) + 2*BlankStdDev)/(double(SignalResult.totalN)*result.occupancy*result.occupancy) + (result.mean*result.mean * (TMath::Exp(result.occupancy) + 1 - 2*double(BlankResult.fraction)))/ (double(BlankResult.fraction)*double(SignalResult.totalN)*result.occupancy*result.occupancy);
+    result.meanUncertainty = (result.occupancy*(result.mean*result.mean + result.variance) + 2*BlankVariance)/(double(SignalResult.totalN)*result.occupancy*result.occupancy) + (result.mean*result.mean * (TMath::Exp(result.occupancy) + 1 - 2*double(BlankResult.fraction)))/ (double(BlankResult.fraction)*double(SignalResult.totalN)*result.occupancy*result.occupancy);
 
     //Statitical uncertainties Eq. 16 from paper
     result.VarianceUncertainty = ((result.mean*result.mean + result.variance)*(result.mean*result.mean + result.variance)*(TMath::Exp(result.occupancy) + 1 - 2*double(BlankResult.fraction)) )/(double(SignalResult.totalN)*result.occupancy*result.occupancy);
@@ -340,7 +340,7 @@ SPEValues CalculateSPE(TH1* h1Signal, TH1* h1Blank, Double_t threshold, Bool_t p
     cout << "\n> Occupancy = " << result.occupancy;
     cout << "\n> Mean: E[psi] = " << result.mean;
     cout << "\n> Variance: V[psi] = " << result.variance;
-    cout << "\n> Sandard Dev.: STDev[psi] = " << result.stdDev;
+    cout << "\n> Standard Dev.: STDev[psi] = " << result.stdDev;
     cout << "\n> Mean Uncertainties: V[E[psi]] = " << result.meanUncertainty;
     cout << "-> " << result.meanUncertainty*100 << "%";
     cout << "\n> StdDev Uncertainties: V[V[psi]] = " << result.VarianceUncertainty;
