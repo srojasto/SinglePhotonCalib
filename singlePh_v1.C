@@ -30,9 +30,9 @@ struct SPEValues{
 
 outValues CalculateFraction(TH1* ,Double_t ,Bool_t );
 SPEValues CalculateSPE(TH1*, TH1*, Double_t, Bool_t );
+Double_t NormHisto(TH1*, TH1*);
 
-
-void singlePh_v1(const Char_t* SChannel = "main_FDDref", Double_t AmpWindowMin = 50, Double_t AmpWindowMax = 1010, const Char_t* fileRoot="results.root",const Char_t* filePedestal="pedestal.root"){
+void singlePh_v1(const Char_t* SChannel = "main_FDDA", const Char_t* fileRoot="fullAtt_2400v_4PMTs_CuPatchPanel/results.root",const Char_t* filePedestal="fullAtt_2400v_4PMTs_CuPatchPanel/pedestal.root", Double_t AmpWindowMin = 10, Double_t AmpWindowMax = 1010){
 
   TString aFile = fileRoot;
   TFile *f = TFile::Open(aFile);
@@ -53,7 +53,8 @@ void singlePh_v1(const Char_t* SChannel = "main_FDDref", Double_t AmpWindowMin =
   //Double_t AmpWindowMin = 50;
   //Double_t AmpWindowMax = 1000;
   Double_t AmpWindowSaturation = 1080;
-  Double_t threshold = -283;
+  Double_t threshold = -273;
+  Double_t thresholdMax = -250;
 
   //------------------------------------------------------
   //------------------------------------------------------
@@ -85,11 +86,17 @@ void singlePh_v1(const Char_t* SChannel = "main_FDDref", Double_t AmpWindowMin =
   h1ChargeCutOver->SetTitle("Charge distribution;Charge (fC);Entries");
   h1ChargeCutOver -> SetLineColor(kMagenta+2);
 
-
   TELaser->Draw(TString::Format("%s.Charge_GATE>>h1ChargeCutUnder(1200,-300,0)", SChannel), TString::Format(" %s.Amplitude < %f  ",SChannel ,AmpWindowMin), "GOFF");
   TH1 *h1ChargeCutUnder = TELaser->GetHistogram();
   h1ChargeCutUnder->SetTitle("Charge distribution;Charge (fC);Entries");
   h1ChargeCutUnder -> SetLineColor(kMagenta+4);
+
+  TEped->Draw(TString::Format("%s.Charge_GATE>>h1ChargeCutPedestal(1200,-300,0)", SChannel), TString::Format(" %s.Amplitude > %f && %s.Amplitude < %f ", SChannel, AmpWindowMin, SChannel, AmpWindowMax), "GOFF");
+  TH1 *h1ChargeCutPedestal = TEped->GetHistogram();
+  h1ChargeCutPedestal->SetTitle("Charge distribution;Charge (fC);Entries");
+  h1ChargeCutPedestal -> SetLineColor(kRed);
+
+  h1ChargeCutPedestal->Scale(NormHisto(h1ChargeCut,h1ChargeCutPedestal));
 
   Double_t w = 1400;
   Double_t h = 1000;
@@ -107,6 +114,7 @@ void singlePh_v1(const Char_t* SChannel = "main_FDDref", Double_t AmpWindowMin =
   c1 -> cd(3) -> SetLogz();
   // Draw charge after cutting
   h1ChargeCut -> Draw();
+  h1ChargeCutPedestal -> Draw("SAME");
   c1 -> cd(4)->SetLogy();
   h1LaserAmp -> Draw();
 
@@ -121,23 +129,13 @@ void singlePh_v1(const Char_t* SChannel = "main_FDDref", Double_t AmpWindowMin =
   outValues blankResult = CalculateFraction(h1Ped, threshold, kTRUE);
   outValues signalResult = CalculateFraction(h1, threshold, kTRUE);
 
-
-
   // Getting the maximum bin and factor for normalization
   Int_t binmaxSig = h1->GetMaximumBin();
   Int_t nSig = h1->GetBinContent(binmaxSig);
-  cout << "binmax="<< binmaxSig << endl;
-  cout << "xbin="<< nSig << endl;
-
   Int_t binmax = h1Ped->GetMaximumBin();
   Int_t n = h1Ped->GetBinContent(binmax);
-  cout << "binmax="<< binmax << endl;
-  cout << "xbin="<< n << endl;
 
-  // Normalization of blank data respect to laser data set
-  Double_t NormFactor = float(nSig)/float(n);
-  cout << "NormFactor="<< NormFactor << endl;
-  h1Ped->Scale(NormFactor);
+  h1Ped->Scale(NormHisto(h1,h1Ped));
 
   h1Ped->SetLineColor(kRed);
   h1Ped->SetLineStyle(1);
@@ -145,8 +143,51 @@ void singlePh_v1(const Char_t* SChannel = "main_FDDref", Double_t AmpWindowMin =
   // Printing histograms in the same canvas
   TCanvas * cped = new TCanvas("cped","Pedestal", w, h*0.6);
   cped->SetLogy();
-  h1->Draw();
   h1Ped->Draw("B SAME");
+  h1->Draw("SAME");
+
+  //---------------------------
+  // Tradicional fit
+
+
+  Double_t par[9];
+  TF1 *g1    = new TF1("g1","gaus",-285,-275);
+  TF1 *g2    = new TF1("g2","gaus",-275,-260);
+  TF1 *g3    = new TF1("g3","gaus",-255,-225);
+  //TF1 *exp = new TF1("exp","exp([0]+[1]*x)",-275,-260);
+  TF1 *total = new TF1("total","gaus(0)+gaus(3)+gaus(6)",-285,-225);
+  total->SetLineColor(kYellow);
+  h1->Fit(g1,"R");
+  h1->Fit(g2,"R+");
+  h1->Fit(g3,"R+");
+  g1->GetParameters(&par[0]);
+  g2->GetParameters(&par[3]);
+  g3->GetParameters(&par[6]);
+  total->SetParameters(par);
+
+   h1->Fit(total,"R+");
+
+   TF1 *exp = new TF1("exp","expo",-280,-277);
+   h1->Fit(exp,"R+");
+   h1->Fit(exp,"R+");
+   exp->Draw("SAME");
+  total -> Draw("SAME");
+
+
+  Double_t parExpo[11];
+  TF1 *totalExpo = new TF1("total","expo(0)+gaus(2)+gaus(5)+gaus(8)",-290,-220);
+  totalExpo->SetLineColor(kGreen);
+  g1->GetParameters(&parExpo[2]);
+  g2->GetParameters(&parExpo[5]);
+  g3->GetParameters(&parExpo[8]);
+  exp->GetParameters(&parExpo[0]);
+  totalExpo->SetParameters(parExpo);
+  h1->Fit(totalExpo,"R+");
+  h1->Fit(totalExpo,"R+");
+  totalExpo -> Draw("SAME");
+  //---------------------------
+  //---------------------------
+
 
   // Obtaining the mean and stdDev of the distributions
   Double_t pedMean = h1Ped -> GetMean();
@@ -217,7 +258,7 @@ void singlePh_v1(const Char_t* SChannel = "main_FDDref", Double_t AmpWindowMin =
   Double_t occupancy;
   SPEValues SPEResult;
 
-  for (Double_t i = threshold; i < -200; i += 1, Index++){
+  for (Double_t i = threshold; i < thresholdMax; i += 1, Index++){
 
     outValues afblankResult = CalculateFraction(h1Ped, i, kFALSE);
     outValues afsignalResult = CalculateFraction(h1, i, kFALSE);
@@ -237,6 +278,11 @@ void singlePh_v1(const Char_t* SChannel = "main_FDDref", Double_t AmpWindowMin =
      // cout << "denominador = " << double(afblankResult.fraction)*double(afsignalResult.totalN);
      // cout << "\tf = " << afblankResult.fraction << endl;
   }
+
+  cout << "Calculation of SPE (Full distribution)";
+  SPEResult = CalculateSPE(h1, h1Ped, -269, kTRUE);
+  cout << "Calculation of SPE (Disstribution with charge cut)";
+  SPEResult = CalculateSPE(h1ChargeCut, h1ChargeCutPedestal, -269, kTRUE);
 
   TCanvas * cThreshold = new TCanvas("cThreshold"," Threshold", w, h);
   cThreshold -> Divide(1,2);
@@ -260,11 +306,25 @@ void singlePh_v1(const Char_t* SChannel = "main_FDDref", Double_t AmpWindowMin =
   cUncert -> cd(2) -> SetLogy();
   grVarianceUncert -> Draw("AL*");
 
-
-  CalculateSPE(h1, h1Ped, -270, kTRUE);
-
 	//TE->StartViewer();
 
+}
+
+
+Double_t NormHisto(TH1* h1, TH1* h1Ped){
+  Int_t binmaxSig = h1->GetMaximumBin();
+  Int_t nSig = h1->GetBinContent(binmaxSig);
+  cout << "binmax="<< binmaxSig << endl;
+  cout << "xbin="<< nSig << endl;
+
+  Int_t binmax = h1Ped->GetMaximumBin();
+  Int_t n = h1Ped->GetBinContent(binmax);
+  cout << "binmax="<< binmax << endl;
+  cout << "xbin="<< n << endl;
+
+  Double_t Factor = float(nSig)/float(n);
+  cout << "NormFactor="<< Factor << endl;
+  return Factor;
 }
 
 outValues CalculateFraction(TH1* histo, Double_t threshold, Bool_t print = kTRUE){
@@ -282,7 +342,7 @@ outValues CalculateFraction(TH1* histo, Double_t threshold, Bool_t print = kTRUE
   result.fraction = result.belowTrs/result.totalN;
 
   if(print){
-    cout << "Threshold bin = " << histo ->  FindBin(threshold);
+    cout << "\nThreshold bin = " << histo ->  FindBin(threshold);
     cout << "\tMinimum bin = " << histo ->  GetMinimumBin();
     cout << "\tMaximum bin = " << histo ->  GetMaximumBin() << endl;
     cout << "belowTrs integral = " << result.belowTrs;
@@ -311,8 +371,8 @@ SPEValues CalculateSPE(TH1* h1Signal, TH1* h1Blank, Double_t threshold, Bool_t p
   SPEValues result;
 
   // Single photo-electron mean calculation E[\psi]= (E[T]-E[B])/E[L]
-  outValues BlankResult = CalculateFraction(h1Blank, threshold, kFALSE);
-  outValues SignalResult = CalculateFraction(h1Signal, threshold, kFALSE);
+  outValues BlankResult = CalculateFraction(h1Blank, threshold, print);
+  outValues SignalResult = CalculateFraction(h1Signal, threshold, print);
   result.occupancy = -TMath::Log(double(SignalResult.belowTrs)/(double(BlankResult.fraction)*double(SignalResult.totalN)));
 
   if (result.occupancy != 0 && SignalResult.totalN != 0){
@@ -326,7 +386,7 @@ SPEValues CalculateSPE(TH1* h1Signal, TH1* h1Blank, Double_t threshold, Bool_t p
     result.meanUncertainty = (result.occupancy*(result.mean*result.mean + result.variance) + 2*BlankVariance)/(double(SignalResult.totalN)*result.occupancy*result.occupancy) + (result.mean*result.mean * (TMath::Exp(result.occupancy) + 1 - 2*double(BlankResult.fraction)))/ (double(BlankResult.fraction)*double(SignalResult.totalN)*result.occupancy*result.occupancy);
 
     //Statitical uncertainties Eq. 16 from paper
-    result.VarianceUncertainty = ((result.mean*result.mean + result.variance)*(result.mean*result.mean + result.variance)*(TMath::Exp(result.occupancy) + 1 - 2*double(BlankResult.fraction)) )/(double(SignalResult.totalN)*result.occupancy*result.occupancy);
+    result.VarianceUncertainty = ((result.mean*result.mean + result.variance)*(result.mean*result.mean + result.variance)*(TMath::Exp(result.occupancy) + 1 - 2*double(BlankResult.fraction)) )/(double(BlankResult.fraction)*double(SignalResult.totalN)*result.occupancy*result.occupancy);
   }
   else{
     result.mean  = 0;
@@ -342,9 +402,9 @@ SPEValues CalculateSPE(TH1* h1Signal, TH1* h1Blank, Double_t threshold, Bool_t p
     cout << "\n> Variance: V[psi] = " << result.variance;
     cout << "\n> Standard Dev.: STDev[psi] = " << result.stdDev;
     cout << "\n> Mean Uncertainties: V[E[psi]] = " << result.meanUncertainty;
-    cout << "-> " << result.meanUncertainty*100 << "%";
+    cout << "-> " << result.meanUncertainty*100/result.mean << "%";
     cout << "\n> StdDev Uncertainties: V[V[psi]] = " << result.VarianceUncertainty;
-    cout << "-> " << result.VarianceUncertainty*100 << "%\n";
+    cout << "-> " << result.VarianceUncertainty*100/result.variance << "%\n";
     cout << endl;
   }
 
