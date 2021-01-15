@@ -353,7 +353,7 @@ SPEValues CalculateSPE(TH1* h1Signal, TH1* h1Blank, Double_t threshold, Bool_t p
   }
 
   if(print){
-    cout << "\n> Occupancy = " << result.occupancy;
+    cout << "> Occupancy = " << result.occupancy;
     cout << "\n> Mean: E[psi] = " << result.mean;
     cout << "\n> Variance: V[psi] = " << result.variance;
     cout << "\n> Standard Dev.: STDev[psi] = " << result.stdDev;
