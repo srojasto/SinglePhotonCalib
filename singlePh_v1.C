@@ -32,7 +32,7 @@ outValues CalculateFraction(TH1* ,Double_t ,Bool_t );
 SPEValues CalculateSPE(TH1*, TH1*, Double_t, Bool_t );
 Double_t NormHisto(TH1*, TH1*);
 
-void singlePh_v1(const Char_t* SChannel = "main_FDDC", const Char_t* fileRoot="root/11otacek_2400v_4PMTs_2nd.root", const Char_t* filePedestal="root/11otacek_2400v_4PMTs_2nd_pedestal.root", Double_t AmpWindowMin = 20, Double_t AmpWindowMax = 840){
+void singlePh_v1(const Char_t* SChannel = "main_FDDA", const Char_t* fileRoot="root/11otacek_2100v_4PMTs_3rd.root", const Char_t* filePedestal="root/11otacek_2100v_4PMTs_3rd_pedestal.root", Double_t AmpWindowMin = 10, Double_t AmpWindowMax = 840){
 
   TString aFile = fileRoot;
   TFile *f = TFile::Open(aFile);
@@ -53,7 +53,7 @@ void singlePh_v1(const Char_t* SChannel = "main_FDDC", const Char_t* fileRoot="r
   //Double_t AmpWindowMin = 50;
   //Double_t AmpWindowMax = 1000;
   Double_t AmpWindowSaturation = 1080;
-  Double_t threshold = 30;
+  Double_t threshold = 26;
   Double_t thresholdMax = 50;
 
   //------------------------------------------------------
@@ -237,9 +237,9 @@ void singlePh_v1(const Char_t* SChannel = "main_FDDC", const Char_t* fileRoot="r
   }
 
   cout << "Calculation of SPE (Full distribution)";
-  SPEResult = CalculateSPE(h1, h1Ped, -279, kTRUE);
+  SPEResult = CalculateSPE(h1, h1Ped, 28, kTRUE);
   cout << "Calculation of SPE (Disstribution with charge cut)";
-  SPEResult = CalculateSPE(h1ChargeCut, h1ChargeCutPedestal, -279, kTRUE);
+  SPEResult = CalculateSPE(h1ChargeCut, h1ChargeCutPedestal, 28, kTRUE);
 
   TCanvas * cThreshold = new TCanvas("cThreshold"," Threshold", w, h);
   cThreshold -> Divide(1,2);
