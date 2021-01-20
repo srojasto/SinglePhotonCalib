@@ -32,7 +32,7 @@ outValues CalculateFraction(TH1* ,Double_t ,Bool_t );
 SPEValues CalculateSPE(TH1*, TH1*, Double_t, Bool_t );
 Double_t NormHisto(TH1*, TH1*);
 
-void singlePh_v1(const Char_t* SChannel = "main_FDDA", const Char_t* fileRoot="fullAtt_2400v_4PMTs_CuPatchPanel/results.root",const Char_t* filePedestal="fullAtt_2400v_4PMTs_CuPatchPanel/pedestal.root", Double_t AmpWindowMin = 10, Double_t AmpWindowMax = 1010){
+void singlePh_v1(const Char_t* SChannel = "main_FDDC", const Char_t* fileRoot="root/11otacek_2400v_4PMTs_2nd.root", const Char_t* filePedestal="root/11otacek_2400v_4PMTs_2nd_pedestal.root", Double_t AmpWindowMin = 20, Double_t AmpWindowMax = 840){
 
   TString aFile = fileRoot;
   TFile *f = TFile::Open(aFile);
@@ -53,8 +53,8 @@ void singlePh_v1(const Char_t* SChannel = "main_FDDA", const Char_t* fileRoot="f
   //Double_t AmpWindowMin = 50;
   //Double_t AmpWindowMax = 1000;
   Double_t AmpWindowSaturation = 1080;
-  Double_t threshold = -273;
-  Double_t thresholdMax = -250;
+  Double_t threshold = 30;
+  Double_t thresholdMax = 50;
 
   //------------------------------------------------------
   //------------------------------------------------------
@@ -63,35 +63,35 @@ void singlePh_v1(const Char_t* SChannel = "main_FDDA", const Char_t* fileRoot="f
   TH1 *h1LaserAmp = TELaser->GetHistogram();
   h1LaserAmp->SetTitle("Amplitude distribution Laser Induced;Amplitude (mV);Entries");
 
-  TELaser->Draw(TString::Format("%s.Charge_GATE:%s.Amplitude>>h2AmpCharge(1200,0,1200, 1200,-300,0)", SChannel, SChannel), "", "GOFF");
+  TELaser->Draw(TString::Format("%s.Charge_GATE:%s.Amplitude>>h2AmpCharge(1200,0,1200,1200, 0, 300)", SChannel, SChannel), "", "GOFF");
   TH1 *h2AmpCharge = TELaser->GetHistogram();
   h2AmpCharge->SetTitle("Amplitude distribution Laser Induced;Amplitude (mV);Charge (fC);Entries");
 
-  TEped->Draw(TString::Format("%s.Charge_GATE:%s.Amplitude>>h2BlankAmpCharge(1200,0,1200, 1200,-300,0)",SChannel, SChannel), "", "GOFF");
+  TEped->Draw(TString::Format("%s.Charge_GATE:%s.Amplitude>>h2BlankAmpCharge(1200,0,1200,1200, 0, 300)",SChannel, SChannel), "", "GOFF");
   TH1 *h2BlankAmpCharge = TEped->GetHistogram();
   h2BlankAmpCharge->SetTitle("Amplitude distribution Blank;Amplitude (mV);Charge (fC);Entries");
 
-  TELaser->Draw(TString::Format("%s.Charge_GATE>>h1(1200,-300,0)", SChannel), "", "GOFF");
-  //TELaser->Draw("main_FDDref.Charge_GATE>>h1(1200,-300,0)", " main_FDDref.Amplitude < 150 && main_FDDref.Amplitude > 50 ", "GOFF");
+  TELaser->Draw(TString::Format("%s.Charge_GATE>>h1(1200,0,300)", SChannel), "", "GOFF");
+  //TELaser->Draw("main_FDDref.Charge_GATE>>h1(1200, 0, 300)", " main_FDDref.Amplitude < 150 && main_FDDref.Amplitude > 50 ", "GOFF");
   TH1 *h1 = TELaser->GetHistogram();
   h1->SetTitle("Charge distribution;Charge (fC);Entries");
 
-  TELaser->Draw(TString::Format("%s.Charge_GATE>>h1ChargeCut(1200,-300,0)", SChannel), TString::Format(" %s.Amplitude > %f && %s.Amplitude < %f ", SChannel, AmpWindowMin, SChannel, AmpWindowMax), "GOFF");
+  TELaser->Draw(TString::Format("%s.Charge_GATE>>h1ChargeCut(1200, 0, 300)", SChannel), TString::Format(" %s.Amplitude > %f && %s.Amplitude < %f ", SChannel, AmpWindowMin, SChannel, AmpWindowMax), "GOFF");
   TH1 *h1ChargeCut = TELaser->GetHistogram();
   h1ChargeCut->SetTitle("Charge distribution;Charge (fC);Entries");
   h1ChargeCut -> SetLineColor(kMagenta);
 
-  TELaser->Draw(TString::Format("%s.Charge_GATE>>h1ChargeCutOver(1200,-300,0)", SChannel), TString::Format(" %s.Amplitude > %f && %s.Amplitude < %f ", SChannel, AmpWindowMax, SChannel, AmpWindowSaturation), "GOFF");
+  TELaser->Draw(TString::Format("%s.Charge_GATE>>h1ChargeCutOver(1200, 0, 300)", SChannel), TString::Format(" %s.Amplitude > %f && %s.Amplitude < %f ", SChannel, AmpWindowMax, SChannel, AmpWindowSaturation), "GOFF");
   TH1 *h1ChargeCutOver = TELaser->GetHistogram();
   h1ChargeCutOver->SetTitle("Charge distribution;Charge (fC);Entries");
   h1ChargeCutOver -> SetLineColor(kMagenta+2);
 
-  TELaser->Draw(TString::Format("%s.Charge_GATE>>h1ChargeCutUnder(1200,-300,0)", SChannel), TString::Format(" %s.Amplitude < %f  ",SChannel ,AmpWindowMin), "GOFF");
+  TELaser->Draw(TString::Format("%s.Charge_GATE>>h1ChargeCutUnder(1200, 0, 300)", SChannel), TString::Format(" %s.Amplitude < %f  ",SChannel ,AmpWindowMin), "GOFF");
   TH1 *h1ChargeCutUnder = TELaser->GetHistogram();
   h1ChargeCutUnder->SetTitle("Charge distribution;Charge (fC);Entries");
   h1ChargeCutUnder -> SetLineColor(kMagenta+4);
 
-  TEped->Draw(TString::Format("%s.Charge_GATE>>h1ChargeCutPedestal(1200,-300,0)", SChannel), TString::Format(" %s.Amplitude > %f && %s.Amplitude < %f ", SChannel, AmpWindowMin, SChannel, AmpWindowMax), "GOFF");
+  TEped->Draw(TString::Format("%s.Charge_GATE>>h1ChargeCutPedestal(1200, 0, 300)", SChannel), TString::Format(" %s.Amplitude > %f && %s.Amplitude < %f ", SChannel, AmpWindowMin, SChannel, AmpWindowMax), "GOFF");
   TH1 *h1ChargeCutPedestal = TEped->GetHistogram();
   h1ChargeCutPedestal->SetTitle("Charge distribution;Charge (fC);Entries");
   h1ChargeCutPedestal -> SetLineColor(kRed);
@@ -119,7 +119,7 @@ void singlePh_v1(const Char_t* SChannel = "main_FDDA", const Char_t* fileRoot="f
   h1LaserAmp -> Draw();
 
 
-  TEped->Draw(TString::Format("%s.Charge_GATE>>h1Ped(1200,-300,0)", SChannel), "", "GOFF");
+  TEped->Draw(TString::Format("%s.Charge_GATE>>h1Ped(1200, 0, 300)", SChannel), "", "GOFF");
   TH1 *h1Ped = TEped->GetHistogram();
   h1Ped->SetTitle("Charge distribution;Charge (fC);Entries");
 
@@ -143,51 +143,8 @@ void singlePh_v1(const Char_t* SChannel = "main_FDDA", const Char_t* fileRoot="f
   // Printing histograms in the same canvas
   TCanvas * cped = new TCanvas("cped","Pedestal", w, h*0.6);
   cped->SetLogy();
+  h1->Draw();
   h1Ped->Draw("B SAME");
-  h1->Draw("SAME");
-
-  //---------------------------
-  // Tradicional fit
-
-
-  Double_t par[9];
-  TF1 *g1    = new TF1("g1","gaus",-285,-275);
-  TF1 *g2    = new TF1("g2","gaus",-275,-260);
-  TF1 *g3    = new TF1("g3","gaus",-255,-225);
-  //TF1 *exp = new TF1("exp","exp([0]+[1]*x)",-275,-260);
-  TF1 *total = new TF1("total","gaus(0)+gaus(3)+gaus(6)",-285,-225);
-  total->SetLineColor(kYellow);
-  h1->Fit(g1,"R");
-  h1->Fit(g2,"R+");
-  h1->Fit(g3,"R+");
-  g1->GetParameters(&par[0]);
-  g2->GetParameters(&par[3]);
-  g3->GetParameters(&par[6]);
-  total->SetParameters(par);
-
-   h1->Fit(total,"R+");
-
-   TF1 *exp = new TF1("exp","expo",-280,-277);
-   h1->Fit(exp,"R+");
-   h1->Fit(exp,"R+");
-   exp->Draw("SAME");
-  total -> Draw("SAME");
-
-
-  Double_t parExpo[11];
-  TF1 *totalExpo = new TF1("total","expo(0)+gaus(2)+gaus(5)+gaus(8)",-290,-220);
-  totalExpo->SetLineColor(kGreen);
-  g1->GetParameters(&parExpo[2]);
-  g2->GetParameters(&parExpo[5]);
-  g3->GetParameters(&parExpo[8]);
-  exp->GetParameters(&parExpo[0]);
-  totalExpo->SetParameters(parExpo);
-  h1->Fit(totalExpo,"R+");
-  h1->Fit(totalExpo,"R+");
-  totalExpo -> Draw("SAME");
-  //---------------------------
-  //---------------------------
-
 
   // Obtaining the mean and stdDev of the distributions
   Double_t pedMean = h1Ped -> GetMean();
@@ -280,9 +237,9 @@ void singlePh_v1(const Char_t* SChannel = "main_FDDA", const Char_t* fileRoot="f
   }
 
   cout << "Calculation of SPE (Full distribution)";
-  SPEResult = CalculateSPE(h1, h1Ped, -269, kTRUE);
+  SPEResult = CalculateSPE(h1, h1Ped, -279, kTRUE);
   cout << "Calculation of SPE (Disstribution with charge cut)";
-  SPEResult = CalculateSPE(h1ChargeCut, h1ChargeCutPedestal, -269, kTRUE);
+  SPEResult = CalculateSPE(h1ChargeCut, h1ChargeCutPedestal, -279, kTRUE);
 
   TCanvas * cThreshold = new TCanvas("cThreshold"," Threshold", w, h);
   cThreshold -> Divide(1,2);
@@ -359,12 +316,12 @@ SPEValues CalculateSPE(TH1* h1Signal, TH1* h1Blank, Double_t threshold, Bool_t p
   // Obtaining the mean and stdDev of the distributions
   Double_t BlankMean = h1Blank -> GetMean();
   Double_t BlankMeanError = h1Blank -> GetMeanError();
-  Double_t BlankVariance = h1Blank -> GetStdDev()*h1Blank -> GetStdDev(); //Variance = StdDev^2
+  Double_t BlankVariance = h1Blank->GetStdDev() * h1Blank->GetStdDev(); //Variance = StdDev^2
   Double_t BlankVarianceError = h1Blank -> GetStdDevError();
 
   Double_t signalMean = h1Signal -> GetMean();
   Double_t signalMeanError = h1Signal -> GetMeanError();
-  Double_t signalVariance = h1Signal -> GetStdDev()*h1Signal -> GetStdDev();//Variance = StdDev^2
+  Double_t signalVariance = h1Signal-> GetStdDev() * h1Signal->GetStdDev();//Variance = StdDev^2
   Double_t signalVarianceError = h1Signal -> GetStdDevError();
 
   // Calculation of the SPE properties: occupancy, mean, standard deviation, etc..
@@ -397,7 +354,7 @@ SPEValues CalculateSPE(TH1* h1Signal, TH1* h1Blank, Double_t threshold, Bool_t p
   }
 
   if(print){
-    cout << "\n> Occupancy = " << result.occupancy;
+    cout << "> Occupancy = " << result.occupancy;
     cout << "\n> Mean: E[psi] = " << result.mean;
     cout << "\n> Variance: V[psi] = " << result.variance;
     cout << "\n> Standard Dev.: STDev[psi] = " << result.stdDev;
