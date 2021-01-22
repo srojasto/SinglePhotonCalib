@@ -32,7 +32,7 @@ outValues CalculateFraction(TH1* ,Double_t ,Bool_t );
 SPEValues CalculateSPE(TH1*, TH1*, Double_t, Bool_t );
 Double_t NormHisto(TH1*, TH1*);
 
-void singlePh_v1(const Char_t* SChannel = "main_FDDA", const Char_t* fileRoot="root/11otacek_2100v_4PMTs_3rd.root", const Char_t* filePedestal="root/11otacek_2100v_4PMTs_3rd_pedestal.root", Double_t AmpWindowMin = 10, Double_t AmpWindowMax = 840){
+void singlePh_v1(const Char_t* SChannel = "main_FDDA", const Char_t* fileRoot="root/batch-5/11otacek_2400v_4PMTs_5th.root", const Char_t* filePedestal="root/batch-3/11otacek_2100v_4PMTs_3rd_pedestal.root", Double_t AmpWindowMin = 13, Double_t AmpWindowMax = 840){
 
   TString aFile = fileRoot;
   TFile *f = TFile::Open(aFile);
